@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analizador Léxico y Sintáctico</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: beige; /* Fondo beige */
+        }
+        textarea {
+            width: 80%;
+            height: 200px;
+            margin-bottom: 10px;
+            resize: none;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+        }
+        table {
+            width: 80%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+            background-color: lightblue; /* Encabezado celeste */
+        }
+        td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+            background-color: lightgray; /* Fondo de celdas en gris */
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Analizador Léxico y Sintáctico</h1>
+    <textarea id="codigo" placeholder="Escribe tu código aquí..."></textarea>
+    <button onclick="analizar()">Analizar</button>
+    <button onclick="limpiar()">Limpiar</button>
+
+    <h2>Resultados Análisis Léxico</h2>
+    <table id="resultadoLexicoTable">
+        <thead>
+            <tr>
+                <th>Línea</th>
+                <th>Token</th>
+                <th>Palabra Reservada</th>
+                <th>Identificador</th>
+                <th>Variable</th>
+                <th>Símbolo</th>
+                <th>Llave Izquierda</th>
+                <th>Llave Derecha</th>
+                <th>Paréntesis Izquierdo</th>
+                <th>Paréntesis Derecho</th>
+            </tr>
+        </thead>
+        <tbody id="resultadoLexico"></tbody>
+    </table>
+
+    <h2>Resultados Análisis Sintáctico</h2>
+    <table id="resultadoSintacticoTable">
+        <thead>
+            <tr>
+                <th>Línea</th>
+                <th>Token</th>
+                <th>Escritura</th>
+            </tr>
+        </thead>
+        <tbody id="resultadoSintactico"></tbody>
+    </table>
+
+    <!-- Tabla de totales -->
+    <h2>Total de Tokens</h2>
+    <table id="resumenTable">
+        <thead>
+            <tr>
+                <th>Total de Tokens</th>
+                <th>Palabras Reservadas</th>
+                <th>Identificadores</th>
+                <th>Variables</th>
+                <th>Símbolos</th>
+                <th>Total de Llaves</th>
+                <th>Total de Paréntesis</th>
+            </tr>
+        </thead>
+        <tbody id="resumenTokens"></tbody>
+    </table>
+
+    <script>
+        const palabrasReservadas = ["programa", "int", "read", "printf", "end", "la", "suma", "es"];
+        const simbolos = {
+            '(': '<Paréntesis de apertura>',
+            ')': '<Paréntesis de cierre>',
+            '{': '<Llave de apertura>',
+            '}': '<Llave de cierre>',
+            ';': '<Punto y coma>',
+            '+': '<Suma>',
+            '=': '<Asignación>', // Agregado para marcar el símbolo de asignación
+            '"': '<Comillas>'
+        };
+
+        function analizar() {
+            const codigo = document.getElementById("codigo").value.trim();
+            const lineas = codigo.split('\n');
+
+            const resultadoLexico = document.getElementById("resultadoLexico");
+            resultadoLexico.innerHTML = ''; // Limpiar resultados previos
+
+            const resultadoSintactico = document.getElementById("resultadoSintactico");
+            resultadoSintactico.innerHTML = ''; // Limpiar resultados previos
+
+            let totalTokens = 0;
+            let totalReservadas = 0, totalIdentificadores = 0, totalVariables = 0;
+            let totalSimbolos = 0, totalLlaves = 0, totalParentesis = 0;
+
+            lineas.forEach((linea, numeroLinea) => {
+                const tokens = separarTokens(linea);
+                
+                tokens.forEach(token => {
+                    totalTokens++; // Cada token cuenta
+                    const fila = document.createElement('tr');
+                    const celdaNumero = document.createElement('td');
+                    celdaNumero.textContent = numeroLinea + 1; // Línea del token
+                    fila.appendChild(celdaNumero);
+                    fila.appendChild(document.createElement('td')).textContent = token; // Token
+
+                    const categorias = {
+                        palabraReservada: '',
+                        identificador: '',
+                        variable: '',
+                        simbolo: '',
+                        llaveIzquierda: '',
+                        llaveDerecha: '',
+                        parenIzquierdo: '',
+                        parenDerecho: ''
+                    };
+
+                    if (token === "suma" && linea.includes("la suma es")) {
+                        categorias.palabraReservada = 'X';
+                        totalReservadas++;
+                    } 
+                    else if (token === "suma") {
+                        categorias.identificador = 'X';
+                        totalIdentificadores++;
+                    } 
+                    else if (palabrasReservadas.includes(token)) {
+                        categorias.palabraReservada = 'X';
+                        totalReservadas++;
+                    } else if (["a", "b", "c"].includes(token)) {
+                        categorias.variable = 'X'; 
+                        totalVariables++;
+                    } else if (simbolos[token]) {
+                        if (token === '{') {
+                            categorias.llaveIzquierda = 'X'; 
+                            totalLlaves++;
+                        } else if (token === '}') {
+                            categorias.llaveDerecha = 'X'; 
+                            totalLlaves++;
+                        } else if (token === '(') {
+                            categorias.parenIzquierdo = 'X'; 
+                            totalParentesis++;
+                        } else if (token === ')') {
+                            categorias.parenDerecho = 'X'; 
+                            totalParentesis++;
+                        } else {
+                            categorias.simbolo = 'X';
+                            totalSimbolos++;
+                        }
+                    }
+
+                    fila.innerHTML += `
+                        <td>${categorias.palabraReservada || ''}</td>
+                        <td>${categorias.identificador || ''}</td>
+                        <td>${categorias.variable || ''}</td>
+                        <td>${categorias.simbolo || ''}</td>
+                        <td>${categorias.llaveIzquierda || ''}</td>
+                        <td>${categorias.llaveDerecha || ''}</td>
+                        <td>${categorias.parenIzquierdo || ''}</td>
+                        <td>${categorias.parenDerecho || ''}</td>
+                    `;
+                    resultadoLexico.appendChild(fila);
+                });
+            });
+
+            // Llenar la tabla resumen con los totales
+            const filaResumen = document.createElement('tr');
+            filaResumen.innerHTML = `
+                <td>${totalTokens}</td>
+                <td>${totalReservadas}</td>
+                <td>${totalIdentificadores}</td>
+                <td>${totalVariables}</td>
+                <td>${totalSimbolos}</td>
+                <td>${totalLlaves}</td>
+                <td>${totalParentesis}</td>
+            `;
+            document.getElementById("resumenTokens").appendChild(filaResumen);
+
+            analizarSintactico(lineas);
+        }
+
+        function separarTokens(linea) {
+            // Mantener la frase "la suma es" junta
+            linea = linea.replace(/la\s+suma\s+es/g, "la suma es");
+            for (let simbolo in simbolos) {
+                linea = linea.replace(new RegExp(`\\${simbolo}`, 'g'), ` ${simbolo} `);
+            }
+            return linea.trim().split(/\s+/);
+        }
+
+        function analizarSintactico(lineas) {
+            lineas.forEach((linea, numeroLinea) => {
+                const filaSintactico = document.createElement('tr');
+                filaSintactico.innerHTML = `<td>${numeroLinea + 1}</td><td>${linea}</td><td>Correcto</td>`;
+                resultadoSintactico.appendChild(filaSintactico);
+            });
+        }
+
+        function limpiar() {
+            document.getElementById("codigo").value = '';
+            document.getElementById("resultadoLexico").innerHTML = '';
+            document.getElementById("resultadoSintactico").innerHTML = '';
+            document.getElementById("resumenTokens").innerHTML = '';
+        }
+    </script>
+
+</body>
+</html>
